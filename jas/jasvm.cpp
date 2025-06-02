@@ -25,7 +25,30 @@ struct Lexer {
   const char* start;
 };
 
-enum TokenType { LAB, DIR, INS, REG, IMM, PAL, PAR, COM, COL, NONE };
+
+#define TOKEN_TYPE_LIST \
+  X(IDN)  \
+  X(DIR)  \
+  X(REG)  \
+  X(IMM)  \
+  X(PAL)  \
+  X(PAR)  \
+  X(COM)  \
+  X(COL)  \
+  X(NONE)
+
+enum TokenType {
+#define X(name) name,
+    TOKEN_TYPE_LIST
+#undef X
+    TOKEN_TYPE_COUNT
+};
+
+const char* const TOKEN_TYPE_NAMES[] = {
+#define X(name) #name,
+    TOKEN_TYPE_LIST
+#undef X
+};
 
 struct Token {
   TokenType type;
@@ -38,7 +61,9 @@ struct Token {
 };
 
 void print_token(Token* token) {
-  printf("%s:%zu: %*.*s\n", token->file_path, token->row,
+
+  printf("%s:%zu: [%s] %*.*s\n", token->file_path, token->row,
+         TOKEN_TYPE_NAMES[token->type],
          (int)token->size, (int)token->size, token->text);
 }
 
@@ -47,7 +72,7 @@ Token lex_token(Lexer* lex) {
   const char* start = NULL;
   const char* end   = NULL;
   TokenType type    = NONE;
-  TokenType types[256] = { NONE };
+  TokenType types[256] = { TOKEN_TYPE_COUNT };
   types[':'] = COL;
   types[','] = COM;
   types['('] = PAL;
@@ -57,11 +82,18 @@ Token lex_token(Lexer* lex) {
   types['$'] = IMM;
 
   for (;;) {
+    // finish token if any of these ocurr
+    // we do not move
     switch (*lex->current) {
+      case '#':
       case ':':
       case ',':
       case '(':
       case ')':
+      case '\n':
+      case ' ':
+      case '\r':
+      case '\t':
         if (lex->start) {
           start = lex->start;
           end = lex->current;
@@ -73,18 +105,30 @@ Token lex_token(Lexer* lex) {
             .file_path = lex->file_path,
             .row = lex->row,
           };
-        } else {
-          start = lex->current;
-          lex->start = NULL;
-          lex->current++;
-          return {
-            .type = types[(u8)*start],
-            .text = start,
-            .size = 1,
-            .file_path = lex->file_path,
-            .row = lex->row,
-          };
         }
+    }
+
+    // move
+    switch (*lex->current) {
+      case '#':
+        while (*lex->current && *lex->current != '\n')
+          lex->current++;
+        break;
+
+      case ':':
+      case ',':
+      case '(':
+      case ')':
+        start = lex->current;
+        lex->start = NULL;
+        lex->current++;
+        return {
+          .type = types[(u8)*start],
+          .text = start,
+          .size = 1,
+          .file_path = lex->file_path,
+          .row = lex->row,
+        };
 
       case '.':
       case '%':
@@ -102,26 +146,15 @@ Token lex_token(Lexer* lex) {
       case ' ':
       case '\r':
       case '\t':
-        if (lex->start) {
-          start = lex->start;
-          end = lex->current;
-          lex->start = NULL;
-          lex->current++;
-          return {
-            .type = type,
-            .text = start,
-            .size = (size_t)(end - start),
-            .file_path = lex->file_path,
-            .row = lex->row,
-          };
-        } else {
-          lex->current++;
-        }
+        lex->current++;
         break;
 
+      // all other chars are valid in IDN
       default:
-        if (!lex->start)
+        if (!lex->start) {
           lex->start = lex->current;
+          type = IDN;
+        }
         lex->current++;
         break;
     }

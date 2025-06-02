@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <format>
+#include <string.h>
 #include "jstdint.h"
 
 std::string read_entire_file(const char* path) {
@@ -37,7 +38,7 @@ struct Lexer {
   X(COL)  \
   X(NONE)
 
-enum TokenType {
+enum class TokenType : u8 {
 #define X(name) name,
     TOKEN_TYPE_LIST
 #undef X
@@ -60,10 +61,19 @@ struct Token {
   size_t row;
 };
 
-void print_token(Token* token) {
+Token create_token(TokenType type, const char* text) {
+  return {
+    .type = type,
+    .text = text,
+    .size = strlen(text),
+    .file_path = NULL,
+    .row = 0,
+  };
+}
 
+void print_token(Token* token) {
   printf("%s:%zu: [%s] %*.*s\n", token->file_path, token->row,
-         TOKEN_TYPE_NAMES[token->type],
+         TOKEN_TYPE_NAMES[(u8)token->type],
          (int)token->size, (int)token->size, token->text);
 }
 
@@ -71,15 +81,15 @@ Token lex_token(Lexer* lex) {
   // for token
   const char* start = NULL;
   const char* end   = NULL;
-  TokenType type    = NONE;
-  TokenType types[256] = { TOKEN_TYPE_COUNT };
-  types[':'] = COL;
-  types[','] = COM;
-  types['('] = PAL;
-  types[')'] = PAR;
-  types['.'] = DIR;
-  types['%'] = REG;
-  types['$'] = IMM;
+  TokenType type    = TokenType::NONE;
+  TokenType types[256] = { TokenType::TOKEN_TYPE_COUNT };
+  types[':'] = TokenType::COL;
+  types[','] = TokenType::COM;
+  types['('] = TokenType::PAL;
+  types[')'] = TokenType::PAR;
+  types['.'] = TokenType::DIR;
+  types['%'] = TokenType::REG;
+  types['$'] = TokenType::IMM;
 
   for (;;) {
     // finish token if any of these ocurr
@@ -153,12 +163,21 @@ Token lex_token(Lexer* lex) {
       default:
         if (!lex->start) {
           lex->start = lex->current;
-          type = IDN;
+          type = TokenType::IDN;
         }
         lex->current++;
         break;
     }
   }
+}
+
+std::vector<Token> lex_tokens(Lexer* lex) {
+  std::vector<Token> tokens;
+  while (*lex->current) {
+    Token token = lex_token(lex);
+    tokens.push_back(token);
+  }
+  return tokens;
 }
 
 int main(int argc, char** argv) {
@@ -172,8 +191,6 @@ int main(int argc, char** argv) {
   size_t size = content.size();
   printf("%s: %zu bytes\n", file_path, size);
 
-  std::vector<Token> tokens;
-
   Lexer lex = {
     .file_path = file_path,
     .row = 0,
@@ -181,9 +198,7 @@ int main(int argc, char** argv) {
     .start = NULL,
   };
 
-  while (*lex.current) {
-    Token token = lex_token(&lex);
-    print_token(&token);
-    tokens.push_back(token);
-  }
+  std::vector<Token> tokens = lex_tokens(&lex);
+  for (size_t i = 0; i < tokens.size(); i++)
+    print_token(&tokens[i]);
 }

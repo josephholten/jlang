@@ -53,19 +53,15 @@ const char* const TOKEN_TYPE_NAMES[] = {
 
 struct Token {
   TokenType type;
-
-  const char* text;
-  size_t size;
-
+  std::string_view text;
   const char* file_path;
   size_t row;
 };
 
-Token create_token(TokenType type, const char* text) {
+Token create_token(TokenType type, std::string_view text) {
   return {
     .type = type,
     .text = text,
-    .size = strlen(text),
     .file_path = NULL,
     .row = 0,
   };
@@ -74,7 +70,7 @@ Token create_token(TokenType type, const char* text) {
 void print_token(Token* token) {
   printf("%s:%zu: [%s] %*.*s\n", token->file_path, token->row,
          TOKEN_TYPE_NAMES[(u8)token->type],
-         (int)token->size, (int)token->size, token->text);
+         (int)token->text.size(), (int)token->text.size(), token->text.data());
 }
 
 Token lex_token(Lexer* lex) {
@@ -111,8 +107,7 @@ Token lex_token(Lexer* lex) {
           lex->start = NULL;
           return {
             .type = type,
-            .text = start,
-            .size = (size_t)(end - start),
+            .text = { start, (size_t)(end - start)},
             .file_path = lex->file_path,
             .row = lex->row,
           };
@@ -135,8 +130,7 @@ Token lex_token(Lexer* lex) {
         lex->current++;
         return {
           .type = types[(u8)*start],
-          .text = start,
-          .size = 1,
+          .text = {start,1},
           .file_path = lex->file_path,
           .row = lex->row,
         };

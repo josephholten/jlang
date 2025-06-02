@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
 
   Lexer lex = {
     .file_path = file_path,
-    .row = 0,
+    .row = 1,
     .current = content.c_str(),
     .start = NULL,
   };

@@ -1,7 +1,3 @@
-.section .rodata
-str:
-  .asciz "hello world"
-
 .section .text
 .global _start
 
@@ -31,3 +27,7 @@ _start:
   call strlen
   mov %rax, %rdi
   call exit
+
+.section .rodata
+str:
+  .asciz "hello world"

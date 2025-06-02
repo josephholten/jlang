@@ -36,6 +36,7 @@ struct Lexer {
   X(PAR)  \
   X(COM)  \
   X(COL)  \
+  X(STR)  \
   X(NONE)
 
 enum class TokenType : u8 {
@@ -120,6 +121,31 @@ Token lex_token(Lexer* lex) {
         while (*lex->current && *lex->current != '\n')
           lex->current++;
         break;
+
+      case '"':
+        lex->current++; // skip '"'
+        lex->start = lex->current;
+
+        while (*lex->current && *lex->current != '"')
+          lex->current++;
+
+        if (!*lex->current) {
+          fprintf(stderr, "ERROR: lex_token: encountered EOF while parsing string starting in line %zu",
+                  lex->row);
+          abort();
+        }
+
+        // token
+        start = lex->start;
+        end = lex->current;
+        lex->start = NULL;
+        lex->current++; // skip '"'
+        return {
+          .type = TokenType::STR,
+          .text = { start, (size_t)(end - start)},
+          .file_path = lex->file_path,
+          .row = lex->row,
+        };
 
       case ':':
       case ',':

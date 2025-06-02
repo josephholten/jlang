@@ -203,6 +203,112 @@ std::vector<Token> lex_tokens(Lexer* lex) {
   return tokens;
 }
 
+#define SECTION_LIST \
+  X(text)  \
+  X(data)  \
+  X(bss)
+
+enum class Section : u8 {
+#define X(name) name,
+    SECTION_LIST
+#undef X
+    SECTION_COUNT
+};
+
+const char* const SECTION_NAMES[] = {
+#define X(name) #name,
+    SECTION_LIST
+#undef X
+};
+
+
+int tokencmp(Token* t, Token* s) {
+  size_t minsize = (t->size < s->size) ? t->size : s->size;
+  return (t->type == s->type) && strncmp(t->text, s->text, minsize);
+}
+
+#define ASTTYPE_LIST \
+  X(program)  \
+  X(section)  \
+  X(label) \
+  X(instr) \
+  X(var)
+
+enum class ASTType : u8 {
+#define X(name) name,
+    ASTTYPE_LIST
+#undef X
+    ASTTYPE_COUNT
+};
+
+const char* const ASTTYPE_NAMES[] = {
+#define X(name) #name,
+    ASTTYPE_LIST
+#undef X
+};
+
+#define OPCODE_LIST \
+  X(XOR) \
+  X(MOVB) \
+  X(TEST) \
+  X(JE) \
+  X(INC) \
+  X(JMP) \
+  X(RET) \
+  X(LEA) \
+  X(CALL) \
+  X(MOV) \
+  X(SYSCALL)
+
+enum class OpCode : u16 {
+#define X(name) name,
+    OPCODE_LIST
+#undef X
+    OPCODE_COUNT
+};
+
+const char* const OPCODE_NAMES[] = {
+#define X(name) #name,
+    OPCODE_LIST
+#undef X
+};
+
+#define REGISTER_LIST \
+  X(rax) \
+  X(rbx) \
+  X(rcx) \
+  X(rsp) \
+  X(rbp) \
+  X(rdi) \
+  X(rsi) \
+  X(rdx)
+
+enum class Register : u8 {
+#define X(name) name,
+    REGISTER_LIST
+#undef X
+    REGISTER_COUNT
+};
+
+const char* const REGISTER_NAMES[] = {
+#define X(name) #name,
+    REGISTER_LIST
+#undef X
+};
+
+// program -> void
+// section -> text
+// label   -> text
+// instr   -> opcode, operands
+// var     -> text
+
+struct ASTNode {
+  ASTType type;
+  ASTNode* child;
+  ASTNode* next;
+  // data
+};
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     fprintf(stderr, "ERROR: usage: %s <file>\n", argv[0]);

@@ -301,6 +301,7 @@ const char* const REGISTER_NAMES[] = {
 // label   -> text
 // instr   -> opcode, operands
 // var     -> text
+// TEST
 
 struct ASTNode {
   ASTType type;

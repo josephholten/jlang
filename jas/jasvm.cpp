@@ -104,7 +104,8 @@ Token lex_token(Lexer* lex) {
       case ' ':
       case '\r':
       case '\t':
-        if (lex->start) {
+      case '\0':
+        if (lex->start || *lex->current == '\0') {
           start = lex->start;
           end = lex->current;
           lex->start = NULL;
@@ -144,7 +145,8 @@ Token lex_token(Lexer* lex) {
       case '%':
       case '$':
         if (lex->start) {
-          fprintf(stderr, "ERROR: lex_token: unexpected char '%c' in token", *lex->current);
+          fprintf(stderr, "ERROR: lex_token: unexpected char '%c' in token at line %zu",
+                  *lex->current, lex->row);
           abort();
         }
         type = types[(u8)*lex->current];
@@ -175,7 +177,8 @@ std::vector<Token> lex_tokens(Lexer* lex) {
   std::vector<Token> tokens;
   while (*lex->current) {
     Token token = lex_token(lex);
-    tokens.push_back(token);
+    if (token.type != TokenType::NONE)
+      tokens.push_back(token);
   }
   return tokens;
 }

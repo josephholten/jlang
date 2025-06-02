@@ -1,12 +1,6 @@
-.section .text
 .global _start
 
-exit:
-  mov $60, %rax  # exit syscall
-  # pass on rdi
-  syscall
-
-
+.section .text
 # strlen(rdi = pointer to string)
 # returns: rax = length
 .type strlen, @function
@@ -31,3 +25,10 @@ _start:
 .section .rodata
 str:
   .asciz "hello world"
+
+.section .text
+
+exit:
+  mov $60, %rax  # exit syscall
+  # pass on rdi
+  syscall

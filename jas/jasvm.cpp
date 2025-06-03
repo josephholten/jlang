@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <string.h>
+#include <frozen/unordered_map.h>
+#include <frozen/string.h>
 #include "jstdint.h"
 
 std::string read_entire_file(const char* path) {
@@ -25,7 +27,7 @@ struct Lexer {
 };
 
 
-#define TOKEN_TYPE_LIST \
+#define TOKENTYPE_LIST \
   X(IDN)  \
   X(DIR)  \
   X(REG)  \
@@ -39,14 +41,14 @@ struct Lexer {
 
 enum class TokenType : u8 {
 #define X(name) name,
-    TOKEN_TYPE_LIST
+    TOKENTYPE_LIST
 #undef X
-    TOKEN_TYPE_COUNT
+    COUNT
 };
 
-const char* const TOKEN_TYPE_NAMES[] = {
+const char* const TOKENTYPE_TO_STR[] = {
 #define X(name) #name,
-    TOKEN_TYPE_LIST
+    TOKENTYPE_LIST
 #undef X
 };
 
@@ -72,7 +74,7 @@ Token create_token(TokenType type, std::string_view text) {
 
 void print_token(Token* token) {
   printf("%s:%zu: [%s] %*.*s\n", token->file_path, token->row,
-         TOKEN_TYPE_NAMES[(u8)token->type],
+         TOKENTYPE_TO_STR[(u8)token->type],
          (int)token->text.size(), (int)token->text.size(), token->text.data());
 }
 
@@ -81,7 +83,7 @@ Token lex_token(Lexer* lex) {
   const char* start = NULL;
   const char* end   = NULL;
   TokenType type    = TokenType::NONE;
-  TokenType types[256] = { TokenType::TOKEN_TYPE_COUNT };
+  TokenType types[256] = { TokenType::NONE };
   types[':'] = TokenType::COL;
   types[','] = TokenType::COM;
   types['('] = TokenType::PAL;
@@ -214,12 +216,21 @@ enum class Section : u8 {
 #define X(name) name,
     SECTION_LIST
 #undef X
-    SECTION_COUNT
+    COUNT
 };
 
-const char* const SECTION_NAMES[] = {
+const char* const SECTION_TO_STR[] = {
 #define X(name) #name,
     SECTION_LIST
+#undef X
+};
+
+static constexpr frozen::unordered_map<
+  frozen::string, Section,
+  (u8)Section::COUNT
+> STR_TO_SECTION = {
+#define X(NAME) {#NAME, Section::NAME},
+  SECTION_LIST
 #undef X
 };
 
@@ -236,18 +247,29 @@ const char* const SECTION_NAMES[] = {
   X(MOV) \
   X(SYSCALL)
 
-enum class OpCode : u16 {
+enum class OpCode : u8 {
 #define X(name) name,
     OPCODE_LIST
 #undef X
-    OPCODE_COUNT
+    COUNT
 };
 
-const char* const OPCODE_NAMES[] = {
+const char* const OPCODE_TO_STR[] = {
 #define X(name) #name,
     OPCODE_LIST
 #undef X
 };
+
+static constexpr frozen::unordered_map<
+  frozen::string, OpCode,
+  (u8)OpCode::COUNT
+> STR_TO_OPCODE = {
+#define X(NAME) {#NAME, OpCode::NAME},
+  OPCODE_LIST
+#undef X
+};
+
+
 
 #define REGISTER_LIST \
   X(rax) \
@@ -263,7 +285,7 @@ enum class Register : u8 {
 #define X(name) name,
     REGISTER_LIST
 #undef X
-    REGISTER_COUNT
+    COUNT
 };
 
 const char* const REGISTER_NAMES[] = {
@@ -271,6 +293,17 @@ const char* const REGISTER_NAMES[] = {
     REGISTER_LIST
 #undef X
 };
+
+static constexpr frozen::unordered_map<
+  frozen::string, Register,
+  (u8)Register::COUNT
+> STR_TO_REGISTER = {
+#define X(NAME) {#NAME, Register::NAME},
+  REGISTER_LIST
+#undef X
+};
+
+
 
 int main(int argc, char** argv) {
   if (argc < 2) {

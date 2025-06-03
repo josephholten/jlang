@@ -1,8 +1,6 @@
 #include <fstream>
-#include <exception>
 #include <string>
 #include <vector>
-#include <format>
 #include <string.h>
 #include "jstdint.h"
 
@@ -58,6 +56,10 @@ struct Token {
   const char* file_path;
   size_t row;
 };
+
+int tokencmp(Token* t, Token* s) {
+  return (t->type == s->type) && (t->text == t->text);
+}
 
 Token create_token(TokenType type, std::string_view text) {
   return {
@@ -170,7 +172,7 @@ Token lex_token(Lexer* lex) {
           abort();
         }
         type = types[(u8)*lex->current];
-        lex->start = lex->current++;
+        lex->start = ++lex->current; // skip initial symbol
         break;
 
       case '\n':
@@ -221,32 +223,6 @@ const char* const SECTION_NAMES[] = {
 #undef X
 };
 
-
-int tokencmp(Token* t, Token* s) {
-  size_t minsize = (t->size < s->size) ? t->size : s->size;
-  return (t->type == s->type) && strncmp(t->text, s->text, minsize);
-}
-
-#define ASTTYPE_LIST \
-  X(program)  \
-  X(section)  \
-  X(label) \
-  X(instr) \
-  X(var)
-
-enum class ASTType : u8 {
-#define X(name) name,
-    ASTTYPE_LIST
-#undef X
-    ASTTYPE_COUNT
-};
-
-const char* const ASTTYPE_NAMES[] = {
-#define X(name) #name,
-    ASTTYPE_LIST
-#undef X
-};
-
 #define OPCODE_LIST \
   X(XOR) \
   X(MOVB) \
@@ -294,19 +270,6 @@ const char* const REGISTER_NAMES[] = {
 #define X(name) #name,
     REGISTER_LIST
 #undef X
-};
-
-// program -> void
-// section -> text
-// label   -> text
-// instr   -> opcode, operands
-// var     -> text
-
-struct ASTNode {
-  ASTType type;
-  ASTNode* child;
-  ASTNode* next;
-  // data
 };
 
 int main(int argc, char** argv) {

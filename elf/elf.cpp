@@ -85,7 +85,7 @@ struct PACKED Phdr {
   u64 memsz;
   u64 align;
 
-  enum class Type {
+  enum class Type : u32 {
     NONE = 0x00,
     LOAD,
     DYNAMIC,
@@ -99,6 +99,27 @@ struct PACKED Phdr {
     LOPROC = 0x70000000,
     HIPROC = 0x7FFFFFFF,
   };
+
+  constexpr static const char* TYPE_TO_STR[] = {
+    "NONE",
+    "LOAD",
+    "DYNAMIC",
+    "INTERP",
+    "NOTE",
+    "SHLIB",
+    "PHDR",
+    "TLS",
+  };
+
+  static const char* type_to_str(u32 type) {
+    if (type < (u32)Type::LOOS) {
+      return TYPE_TO_STR[type];
+    }
+    if (type < (u32)Type::LOPROC) {
+      return "OS";
+    }
+    return "PROC";
+  }
 
   enum class Flag {
     X = 0x1,
@@ -120,7 +141,7 @@ struct PACKED Shdr {
   u64 addralign;
   u64 entsize;
 
-  enum class Type {
+  enum class Type : u32 {
     NONE,
     PROGBITS,
     SYMTAB,
@@ -182,7 +203,7 @@ int main(int argc, char** argv) {
   assert(eh->DATA == 1); // little endian
   assert(eh->ehsize == sizeof(Ehdr));
 
-  if (eh->phentsize != 0) {
+  if (eh->phentsize != 0 && eh->phnum != 0 && eh->phoff != 0) {
     assert(size >= eh->phoff + sizeof(Ehdr));
     assert(eh->phentsize == sizeof(Phdr));
     const Phdr* ph_table =  (Phdr*)(bytes+eh->phoff);
@@ -191,25 +212,31 @@ int main(int argc, char** argv) {
     for (u16 i = 0; i < ph_num; i++) {
       const Phdr* ph = ph_table + i;
       printf("program header: %d\n", i);
-      printf("  type = %d\n", ph->type);
-      (void)ph;
+      printf("  type = 0x%x (%s)\n", ph->type, Phdr::type_to_str(ph->type));
+      printf("  memsz = 0x%lx\n", ph->memsz);
+      printf("  offset = 0x%lx\n", ph->offset);
     }
   }
 
-  assert(size >= eh->shoff + sizeof(Shdr));
-  assert(eh->shentsize == sizeof(Shdr));
-  const Shdr* sh_table =  (Shdr*)(bytes+eh->shoff);
-  const u16 sh_num = eh->shnum;
-  const u16 sh_names_idx = eh->shstrndx;
-  assert(sh_names_idx < sh_num);
-  printf("sh names idx: %d\n", sh_names_idx);
+  if (eh->shentsize != 0 && eh->shnum != 0 && eh->shoff != 0) {
+    assert(size >= eh->shoff + sizeof(Shdr));
+    assert(eh->shentsize == sizeof(Shdr));
+    const Shdr* sh_table =  (Shdr*)(bytes+eh->shoff);
+    const u16 sh_num = eh->shnum;
+    const u16 sh_names_idx = eh->shstrndx;
+    assert(sh_names_idx < sh_num);
+    // printf("sh names idx: %d\n", sh_names_idx);
 
-  const Shdr* sh_names = sh_table + sh_names_idx;
-  const char* section_names = (char*)(bytes + sh_names->offset);
+    const Shdr* sh_names = sh_table + sh_names_idx;
+    const char* section_names = (char*)(bytes + sh_names->offset);
 
-  for (u16 i = 0; i < sh_num; i++) {
-    const Shdr* sh = sh_table + i;
-    printf("section: %d\n", i);
-    printf("  name: %s\n", section_names + sh->name);
+    for (u16 i = 0; i < sh_num; i++) {
+      const Shdr* sh = sh_table + i;
+      printf("section: %d\n", i);
+      printf("  type = 0x%x\n", sh->type);
+      printf("  name = %s\n", section_names + sh->name);
+      printf("  size = 0x%lx\n", (sh->type == (u32)Shdr::Type::NOBITS ? 0 : sh->size));
+      printf("  offset = 0x%lx\n", sh->offset);
+    }
   }
 }

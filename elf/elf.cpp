@@ -173,6 +173,8 @@ int main(int argc, char** argv) {
   u64 size = content.size();
   const u8* bytes = (u8*)&content[0];
 
+  printf("size = %ld\n", size);
+
   assert(size >= sizeof(Ehdr));
   const Ehdr* eh = (Ehdr*)bytes;
   assert(0 == strncmp(eh->MAG, ELF_MAG, sizeof(ELF_MAG)));
@@ -180,15 +182,18 @@ int main(int argc, char** argv) {
   assert(eh->DATA == 1); // little endian
   assert(eh->ehsize == sizeof(Ehdr));
 
-  assert(size >= eh->phoff + sizeof(Ehdr));
-  assert(eh->phentsize == sizeof(Phdr));
-  const Phdr* ph_table =  (Phdr*)(bytes+eh->phoff);
-  const u16 ph_num = eh->phnum;
+  if (eh->phentsize != 0) {
+    assert(size >= eh->phoff + sizeof(Ehdr));
+    assert(eh->phentsize == sizeof(Phdr));
+    const Phdr* ph_table =  (Phdr*)(bytes+eh->phoff);
+    const u16 ph_num = eh->phnum;
 
-  for (u16 i = 0; i < ph_num; i++) {
-    const Phdr* ph = ph_table + i;
-    printf("p_type = %d\n", ph->type);
-    (void)ph;
+    for (u16 i = 0; i < ph_num; i++) {
+      const Phdr* ph = ph_table + i;
+      printf("program header: %d\n", i);
+      printf("  type = %d\n", ph->type);
+      (void)ph;
+    }
   }
 
   assert(size >= eh->shoff + sizeof(Shdr));
@@ -197,11 +202,14 @@ int main(int argc, char** argv) {
   const u16 sh_num = eh->shnum;
   const u16 sh_names_idx = eh->shstrndx;
   assert(sh_names_idx < sh_num);
+  printf("sh names idx: %d\n", sh_names_idx);
+
   const Shdr* sh_names = sh_table + sh_names_idx;
   const char* section_names = (char*)(bytes + sh_names->offset);
 
   for (u16 i = 0; i < sh_num; i++) {
     const Shdr* sh = sh_table + i;
-    printf("%s\n", section_names + sh->name);
+    printf("section: %d\n", i);
+    printf("  name: %s\n", section_names + sh->name);
   }
 }
